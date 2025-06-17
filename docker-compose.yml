@@ -1,12 +1,13 @@
 services:
   n8n-gbs:
     image: n8nio/n8n
+    environment:
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE}
     ports:
       - "5678:5678"
     volumes:
-      - ./:/home/node/.n8n
-    environment:
-      GENERIC_TIMEZONE: America/Sao_Paulo
+      - ./data:/home/data
+      - ./n8n_data:/home/node/.n8n
     restart: unless-stopped
     networks:
       - n8n-network-gbs
@@ -14,3 +15,5 @@ services:
 networks:
   n8n-network-gbs:
     driver: bridge
+volumes:
+  n8n_data
