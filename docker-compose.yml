@@ -16,4 +16,4 @@ networks:
   n8n-network-gbs:
     driver: bridge
 volumes:
-  n8n_data
+  n8n_data:
