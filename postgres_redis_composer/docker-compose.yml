@@ -1,0 +1,29 @@
+version: '3.7'
+
+services:
+  postgres:
+    image: bitnami/postgresql:latest
+    container_name: postgres_gbs
+    ports:
+      - "5444:5432"
+    environment:
+      POSTGRES_USER: docker
+      POSTGRES_PASSWORD: docker
+      POSTGRES_DB: gbs
+  
+    volumes:
+      - ./gbs_pg_data:/bitnami/postgresql/data
+
+  redis:
+    image: bitnami/redis:latest
+    container_name: redis_gbs
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./gbs_redis_data:/bitnami/redis/data
+
+volumes:
+  gbs_pg_data:
+  gbs_redis_data:
