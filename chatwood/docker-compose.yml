@@ -1,50 +1,62 @@
-version: '3.8'
+version: "3.9"
 
 services:
-  postgres:
-    image: postgres:13
-    container_name: chatwoot-postgres
-    restart: unless-stopped
+  db:
+    image: postgres:15-alpine
+    restart: always
+    ports:
+      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_USER=chatwoot
-      - POSTGRES_PASSWORD=chatwoot
-      - POSTGRES_DB=chatwoot
+      # O volume agora usará um subdiretório local para persistir os dados
+      - ./postgres-data:/var/lib/postgresql/data
+    env_file:
+      - .env
 
   redis:
-    image: redis:6
-    container_name: chatwoot-redis
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
-
-  chatwoot:
-    image: chatwoot/chatwoot:latest
-    container_name: chatwoot-web
-    restart: unless-stopped
-    depends_on:
-      - postgres
-      - redis
+    image: redis:7.0-alpine
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     ports:
-      - "3010:3000"  # Porta HTTP do container (3000) mapeada para 3010 no host
-      - "3011:3001"  # Porta WebSocket do container (3001) mapeada para 3011 no host
+      - "6379:6379"
     volumes:
-      - chatwoot_data:/app/storage
-    environment:
-      - RAILS_ENV=production
-      - NODE_ENV=production
-      - SECRET_KEY_BASE=sua-chave-gerada-aqui  # Gerada com `openssl rand -hex 64`
-      - DATABASE_URL=postgresql://chatwoot:chatwoot@postgres:5432/chatwoot
-      - REDIS_URL=redis://redis:6379
-      - FRONTEND_URL=http://localhost:3010  # Use a porta do host (3010)
-      - SMTP_ADDRESS=smtp.example.com       # Configuração opcional
-      - SMTP_USERNAME=seu-email@example.com
-      - SMTP_PASSWORD=sua-senha
-      - SMTP_PORT=587
-    command: bundle exec rails s -p 3000 -b '0.0.0.0'  # Linha crítica!
+      # O volume agora usará um subdiretório local
+      - ./redis-data:/data
+    env_file:
+      - .env
 
+  rails:
+    # A mágica acontece aqui: `build: .` agora encontra o Dockerfile
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - redis
+    volumes:
+      # O volume de storage para uploads
+      - ./storage:/app/storage
+    env_file:
+      - .env
+    command: bundle exec rails s -p 3000 -b '0.0.0.0'
+
+  sidekiq:
+    # Usa a mesma imagem construída para o serviço 'rails'
+    build: .
+    restart: always
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./storage:/app/storage
+    env_file:
+      - .env
+    command: bundle exec sidekiq -C config/sidekiq.yml
+
+# Nota: A declaração de volumes no final não é mais necessária
+# porque estamos usando "bind mounts" (ex: ./postgres-data:/...)
+# Mas manter não causa problema.
 volumes:
-  postgres_data:
-  redis_data:
-  chatwoot_data:
+  postgres-data:
+  redis-data:
+  storage:
