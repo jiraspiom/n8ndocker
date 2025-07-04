@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: chatwoot-postgres
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=chatwoot
+      - POSTGRES_PASSWORD=chatwoot
+      - POSTGRES_DB=chatwoot
+
+  redis:
+    image: redis:6
+    container_name: chatwoot-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  chatwoot:
+    image: chatwoot/chatwoot:latest
+    container_name: chatwoot-web
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3010:3000"  # Porta HTTP do container (3000) mapeada para 3010 no host
+      - "3011:3001"  # Porta WebSocket do container (3001) mapeada para 3011 no host
+    volumes:
+      - chatwoot_data:/app/storage
+    environment:
+      - RAILS_ENV=production
+      - NODE_ENV=production
+      - SECRET_KEY_BASE=sua-chave-gerada-aqui  # Gerada com `openssl rand -hex 64`
+      - DATABASE_URL=postgresql://chatwoot:chatwoot@postgres:5432/chatwoot
+      - REDIS_URL=redis://redis:6379
+      - FRONTEND_URL=http://localhost:3010  # Use a porta do host (3010)
+      - SMTP_ADDRESS=smtp.example.com       # Configuração opcional
+      - SMTP_USERNAME=seu-email@example.com
+      - SMTP_PASSWORD=sua-senha
+      - SMTP_PORT=587
+    command: bundle exec rails s -p 3000 -b '0.0.0.0'  # Linha crítica!
+
+volumes:
+  postgres_data:
+  redis_data:
+  chatwoot_data:
