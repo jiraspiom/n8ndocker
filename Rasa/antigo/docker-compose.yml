@@ -1,0 +1,56 @@
+version: '3.4'
+
+services:
+  # Banco de dados PostgreSQL
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: botpress  # Database principal para Botpress
+      POSTGRES_USER: rasa
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Redis para gerenciamento de sessões
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  # Servidor Rasa principal
+  rasa:
+    image: rasa/rasa:latest
+    ports:
+      - "5005:5005"
+    volumes:
+      - ./:/app
+    command: 
+      - "run"
+      - "--enable-api"
+      - "--debug"
+      - "--cors"
+      - "*"
+    environment:
+      - RASADB_URL=postgres://rasa:password@postgres:5432/botpress
+    depends_on:
+      - postgres
+      - redis
+
+  # Botpress - Interface Visual
+  botpress:
+    image: botpress/server:latest
+    ports:
+      - "3000:3000"  # Agora na porta 3000
+    environment:
+      - BP_URL=http://localhost:3000
+      - DATABASE_URL=postgres://rasa:password@postgres:5432/botpress
+    depends_on:
+      - postgres
+    volumes:
+      - botpress_data:/botpress
+
+volumes:
+  postgres_data:
+  botpress_data:

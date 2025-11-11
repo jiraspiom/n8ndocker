@@ -1,0 +1,76 @@
+version: '3.4'
+
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: rasa
+      POSTGRES_USER: rasa
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  rasa:
+    image: rasa/rasa:latest
+    ports:
+      - "5005:5005"
+    volumes:
+      - ./:/app
+    command: 
+      - "run"
+      - "--enable-api"
+      - "--debug"
+      - "--cors"
+      - "*"
+    depends_on:
+      - postgres
+      - redis
+
+  mongo:
+    image: mongo:4.4
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+
+  botfront:
+    image: botfront/botfront:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - BF_PROJECT_NAME=MeuBotWhatsApp
+      - BF_API_URL=http://rasa:5005
+      - BF_PROJECT_ID=meu-bot-whatsapp
+      - MONGO_URL=mongodb://mongo:27017/botfront
+      - ROOT_URL=http://localhost:3000
+      - PORT=3000
+    depends_on:
+      - rasa
+      - mongo
+    volumes:
+      - ./botfront_data:/botfront
+
+  botpress:
+    image: botpress/server:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - BP_URL=http://localhost:3001
+      - DATABASE_URL=postgres://rasa:password@postgres:5432/botpress
+    depends_on:
+      - postgres
+    volumes:
+      - botpress_data:/botpress
+
+volumes:
+  postgres_data:
+  mongo_data:
+  botfront_data:
+  botpress_data:

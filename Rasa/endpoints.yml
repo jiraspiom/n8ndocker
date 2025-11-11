@@ -1,0 +1,14 @@
+action_endpoint:
+  url: "http://localhost:5055/webhook"
+
+tracker_store:
+  type: SQL
+  url: postgresql://rasa:password@postgres:5432/rasa_db  # ← postgresql://
+
+lock_store:
+  type: Redis
+  url: redis://redis:6379
+
+event_broker:
+  type: SQL
+  url: postgresql://rasa:password@postgres:5432/rasa_db  # ← postgresql://
